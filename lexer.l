@@ -1,4 +1,6 @@
 %option noyywrap
+%option nounput
+%option noinput
 
 %{
 #define T_eof	0
@@ -33,7 +35,7 @@ ESC \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 "decl"		{ return T_decl; }
 "def"		{ return T_def; }
 "else"		{ return T_else; }
-"elsif"		{ return T_elsif; }
+"elif"		{ return T_elif; }
 "end"		{ return T_end; }
 "exit"		{ return T_exit; }
 "false"		{ return T_false; }
@@ -87,7 +89,8 @@ ESC \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 
 <<EOF>>					{ if(comment_num!=0) { fprintf(stderr, "Comment starts but doesn't close\n"); exit(1); } return T_eof; }
 
-.						{ fprintf(stderr, "Illegal character in line %d\n", line); exit(1); } 
+.						{ fprintf(stderr, "Illegal character with code %d in line %d\n", yytext[0], line); exit(1); } 
+
 
 %%
 
@@ -124,7 +127,6 @@ void fix_esc_string(char * yytext)
 		return;
 	}
 	int i=1, j, len, h1, h2;
-	char c;
 	bool flag;
 	yytext[0]=yytext[1];
 	while(yytext[i]!='\0')
@@ -184,4 +186,9 @@ int hexToInt(char a)
 		exit(1);
 	}
 	return -1;
+}
+
+void yyerror(const char *msg) {
+  fprintf(stderr, "%s\n", msg);
+  exit(1);
 }
