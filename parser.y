@@ -9,7 +9,7 @@
 %token T_decl			"decl"
 %token T_def			"def"
 %token T_else			"else"
-%token T_elif			"elif"
+%token T_elsif			"elsif"
 %token T_end			"end"
 %token T_exit			"exit"
 %token T_false			"false"
@@ -88,12 +88,13 @@ formal_list2:
 ;
 
 formal:
-	"ref" type T_id id_list
+	"ref" type T_id id_par_list
+|	type T_id id_par_list
 ;
 
-id_list:
+id_par_list:
 	/* nothing */
-|	',' T_id id_list
+|	',' T_id id_par_list
 ;
 
 type:
@@ -110,6 +111,11 @@ func_decl:
 
 var_def:
 	type T_id id_list
+;
+
+id_list:
+	/* nothing */
+|	',' T_id id_list
 ;
 
 stmt:
@@ -132,7 +138,7 @@ if_stmt:
 
 elsif:
 	/* nothing */
-|	"elif" expr ':' stmt_list elsif
+|	"elsif" expr ':' stmt_list elsif
 ;
 
 else:

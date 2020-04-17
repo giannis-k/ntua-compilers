@@ -35,7 +35,7 @@ ESC \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 "decl"		{ return T_decl; }
 "def"		{ return T_def; }
 "else"		{ return T_else; }
-"elif"		{ return T_elif; }
+"elsif"		{ return T_elsif; }
 "end"		{ return T_end; }
 "exit"		{ return T_exit; }
 "false"		{ return T_false; }
