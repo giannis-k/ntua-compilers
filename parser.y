@@ -2,7 +2,8 @@
 #include <cstdio>
 #include "lexer.hpp"
 %}
-
+%define parse.error verbose
+%locations
 %token T_and			"and"
 %token T_bool			"bool"
 %token T_char			"char"
