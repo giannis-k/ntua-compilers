@@ -1,7 +1,6 @@
 %option noyywrap
 %option nounput
 %option noinput
-%option yylineno
 
 %{
 #define T_eof	0
@@ -189,8 +188,19 @@ int hexToInt(char a)
 	return -1;
 }
 
-void yyerror(const char *str)
-{
-    fprintf(stderr,"Error | Line: %d\n%s\n",yylineno,str);
-    exit(1);
+void yyerror(const char *msg) {
+  fprintf(stderr, "%s\n", msg);
+  exit(1);
 }
+© 2020 GitHub, Inc.
+Terms
+Privacy
+Security
+Status
+Help
+Contact GitHub
+Pricing
+API
+Training
+Blog
+About
