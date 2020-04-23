@@ -192,15 +192,3 @@ void yyerror(const char *msg) {
   fprintf(stderr, "%s\n", msg);
   exit(1);
 }
-© 2020 GitHub, Inc.
-Terms
-Privacy
-Security
-Status
-Help
-Contact GitHub
-Pricing
-API
-Training
-Blog
-About
