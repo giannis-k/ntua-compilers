@@ -56,13 +56,13 @@ ESC \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 "tail"		{ return T_tail; }
 "true"		{ return T_true; }
 
-{L}({L}|{D}|_|\?)*		{ return T_id; }
+{L}({L}|{D}|_|\?)*		{yylval.name = strdup(yytext); return T_id; }
 
-{D}+					{ return T_int_const; }
+{D}+					{yylval.ch = atoi(yytext); return T_int_const; }
 
-\'([^\"\'\\]|{ESC})\'	{ fix_esc_char(yytext); return T_char_const; }
+\'([^\"\'\\]|{ESC})\'	{ fix_esc_char(yytext); yylval.ch = yytext[0]; return T_char_const; }
 
-\"([^\n\"\'\\]|{ESC})*\" { fix_esc_string(yytext); return T_string; }
+\"([^\n\"\'\\]|{ESC})*\" { fix_esc_string(yytext); yylval.str = strdup(yytext); return T_string; }
 
 [+|\-|*|/|#|=|<|>]	{ return yytext[0]; }
 
@@ -89,7 +89,7 @@ ESC \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 
 <<EOF>>					{ if(comment_num!=0) { fprintf(stderr, "Comment starts but doesn't close\n"); exit(1); } return T_eof; }
 
-.						{ fprintf(stderr, "Illegal character with code %d in line %d\n", yytext[0], line); exit(1); } 
+.						{ fprintf(stderr, "Illegal character with code %d in line %d\n", yytext[0], line); exit(1); }
 
 
 %%

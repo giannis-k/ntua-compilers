@@ -33,18 +33,25 @@
 %token T_ge				">="
 %token T_ne				"<>"
 %token T_assign			":="
-%token T_int_const
-%token T_char_const
-%token T_id
-%token T_string
+%token T_int_const<num>
+%token T_char_const<ch>
+%token T_id<name>
+%token T_string<str>
 
 %left "or"
 %left "and"
 %nonassoc "not"
-%nonassoc '=' "<>" '>' '<' "<=" ">=" 
+%nonassoc '=' "<>" '>' '<' "<=" ">="
 %right '#'
 %left '+' '-'
 %left '*' '/' "mod"
+
+%union {
+	char ch;
+	char *str;
+  char *name;
+  int num;
+}
 
 %%
 
