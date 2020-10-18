@@ -49,8 +49,7 @@
 %union {
 	char ch;
 	char *str;
-  char *name;
-  int num;
+	int num;
 }
 
 %%

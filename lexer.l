@@ -56,9 +56,9 @@ ESC \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 "tail"		{ return T_tail; }
 "true"		{ return T_true; }
 
-{L}({L}|{D}|_|\?)*		{yylval.name = strdup(yytext); return T_id; }
+{L}({L}|{D}|_|\?)*		{yylval.str = strdup(yytext); return T_id; }
 
-{D}+					{yylval.ch = atoi(yytext); return T_int_const; }
+{D}+					{yylval.num = atoi(yytext); return T_int_const; }
 
 \'([^\"\'\\]|{ESC})\'	{ fix_esc_char(yytext); yylval.ch = yytext[0]; return T_char_const; }
 
