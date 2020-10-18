@@ -1,6 +1,9 @@
 %{
 #include <cstdio>
+#include <memory>
+#include "ast.hpp"
 #include "lexer.hpp"
+#include "SymTable.hpp"
 %}
 
 %token T_and			"and"
@@ -47,10 +50,20 @@
 %left '*' '/' "mod"
 
 %union {
+	AST* t;
 	char ch;
-	char *str;
+	char* str;
 	int num;
 }
+
+%type<t> simple
+%type<t> atom
+%type<t> expr
+%type<t> call
+%type<str> T_id
+%type<num> T_int_const
+%type<ch> T_char_const
+%type<str> T_string
 
 %%
 
@@ -133,9 +146,9 @@ stmt:
 ;
 
 simple:
-	"skip"
-|	atom ":=" expr
-|	call
+	"skip" {$$ = new Skip();}
+|	atom ":=" expr {$$ = new Assign($1, $3);}
+|	call {$$ = $1;}
 ;
 
 if_stmt:
@@ -180,41 +193,41 @@ expr_list2:
 ;
 
 atom:
-	T_id
-|	T_string
-|	atom '[' expr ']'
-|	call
+	T_id {$$ = new Var(std::string $1);}
+|	T_string {$$ = new String(std::string $1);}
+|	atom '[' expr ']' {$$ = new Arr($1, $3);}
+|	call {$$ = $1;}
 ;
 
 expr:
-	atom
-|	T_int_const
-|	T_char_const
-|	'(' expr ')'
-|	'+' expr
-|	'-' expr
-|	expr '+' expr
-|	expr '-' expr
-|	expr '*' expr
-|	expr '/' expr
-|	expr "mod" expr
-|	expr '=' expr
-|	expr "<>" expr
-|	expr '<' expr
-|	expr '>' expr
-|	expr "<=" expr
-|	expr ">=" expr
-|	"true"
-|	"false"
-|	"not" expr
-|	expr "and" expr
-|	expr "or" expr
-|	"new" type '[' expr ']'
-|	expr '#' expr
-|	"nil"
-|	"nil?" '(' expr ')'
-|	"head" '(' expr ')'
-|	"tail" '(' expr ')'
+	atom {$$ = $1;}
+|	T_int_const {$$ = new Int($1);}
+|	T_char_const {$$ = new Char($1);}
+|	'(' expr ')' {$$ = $2;}
+|	'+' expr {new UnOp(PLUS, $2);}
+|	'-' expr {new UnOp(MINUS, $2);}
+|	expr '+' expr {$$ = new BinOp($1, PLUS, $3);}
+|	expr '-' expr {$$ = new BinOp($1, MINUS, $3);}
+|	expr '*' expr {$$ = new BinOp($1, MUL, $3);}
+|	expr '/' expr {$$ = new BinOp($1, DIV, $3);}
+|	expr "mod" expr {$$ = new BinOp($1, MOD, $3);}
+|	expr '=' expr {$$ = new BinOp($1, EQ, $3);}
+|	expr "<>" expr {$$ = new BinOp($1, NOT_EQ, $3);}
+|	expr '<' expr {$$ = new BinOp($1, LESS, $3);}
+|	expr '>' expr {$$ = new BinOp($1, GREATER, $3);}
+|	expr "<=" expr {$$ = new BinOp($1, LESS_EQ, $3);}
+|	expr ">=" expr {$$ = new BinOp($1, GREATER_EQ, $3);}
+|	"true" {$$ = new Bool(true);}
+|	"false" {$$ = new Bool(false);}
+|	"not" expr {new UnOp(NOT, $2);}
+|	expr "and" expr {$$ = new BinOp($1, AND, $3);}
+|	expr "or" expr {$$ = new BinOp($1, OR, $3);}
+|	"new" type '[' expr ']' {$$ = new New($2, $4);}
+|	expr '#' expr {$$ = new BinOp($1, CONS, $3);}
+|	"nil" {$$ = new Nil();}
+|	"nil?" '(' expr ')' {new UnOp(NILQ, $3);}
+|	"head" '(' expr ')' {new UnOp(HEAD, $3);}
+|	"tail" '(' expr ')'  {new UnOp(TAIL, $3);}
 ;
 
 %%
