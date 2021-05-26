@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include "ast.hpp"
 
-enum Operator {
+enum BOperator {
 	PLUS,
 	MINUS,
 	MUL,
@@ -21,10 +21,15 @@ enum Operator {
 	GREATER,
 	LESS_EQ,
 	GREATER_EQ,
-	NOT,
 	AND,
 	OR,
-	CONS,
+	CONS
+};
+
+enum UOperator {
+	UPLUS,
+	UMINUS,
+	NOT,
 	NILQ,
 	HEAD,
 	TAIL
@@ -167,7 +172,7 @@ public:
 		return 8;
 	}
 
-	virtual std::shared_ptr<Type> refType()
+	virtual std::shared_ptr<Type> refType() override
 	{
 		return this->ref;
 	}
@@ -194,7 +199,7 @@ public:
 		return 8;
 	}
 
-	virtual std::shared_ptr<Type> refType()
+	virtual std::shared_ptr<Type> refType() override
 	{
 		return this->ref;
 	}
@@ -214,6 +219,11 @@ public:
 	std::string getId()
 	{
 		return this->id;
+	}
+
+	virtual bool isPrevScope()
+	{
+		return false;
 	}
 
 	void setNesting(int nesting)
@@ -337,7 +347,7 @@ public:
 
 	virtual std::ostream& print(std::ostream &out) const override
 	{
-		return (out<<"variable: "<<'\"'<<this->id<<'\"');
+		return (out<<"variable: "<<'\"'<<this->id<<'\"'<<" with type "<<*type);
 	}
 
 private:
@@ -346,7 +356,7 @@ private:
 
 class ParameterEntry : public Entry {
 public:
-	ParameterEntry(std::string id, std::shared_ptr<Type> type, PassMode mode)
+	ParameterEntry(std::string id, std::shared_ptr<Type> type, PassMode mode, bool prev=false)
 	{
 		if((type->getType()==ARRAY || type->getType()==LIST) && mode==VAL)
 		{
@@ -357,6 +367,12 @@ public:
 		this->type=type;
 		this->mode=mode;
 		this->entry_type=PAR;
+		this->isPrev=prev;
+	}
+
+	virtual bool isPrevScope() override
+	{
+		return this->isPrev;
 	}
 
 	void setOffset(int offset)
@@ -376,11 +392,12 @@ public:
 
 	virtual std::ostream& print(std::ostream &out) const override
 	{
-		return (out<<"parameter: "<<'\"'<<this->id<<'\"');
+		return (out<<isPrev<<"parameter: "<<'\"'<<this->id<<'\"');
 	}
 
 private:
 	int offset;
+	bool isPrev;
 	PassMode mode;
 };
 
@@ -438,7 +455,7 @@ public:
 	virtual std::ostream& print(std::ostream &out) const override
 	{
 		if(decl) out<<"declared ";
-		out<<"function: "<<'\"'<<this->id<<'\"';
+		out<<"function: "<<'\"'<<this->id<<'\"'<<" nesting "<<nesting;
 		if(parameters.size()==0) out<<"\n\tno parameters";
 		else
 		{
@@ -495,8 +512,9 @@ public:
 		return function;
 	}
 
+	int offset;
 private:
-	int nesting, offset;
+	int nesting;
 	std::shared_ptr<Entry> function;
 };
 
@@ -514,7 +532,7 @@ public:
 		int nesting = scopes.front()->getNesting();
 		for(auto& it: this->entries)
 		{
-			std::deque<std::shared_ptr<Entry>> sc = it.second;
+			std::deque<std::shared_ptr<Entry>>& sc = it.second;
 			while(!sc.empty())
 			{
 				if(sc.front()->getNesting() < nesting) break;
@@ -548,7 +566,7 @@ public:
 			else break;
 		}
 		for(int i = nesting+1;; ++i) {
-			std::shared_ptr<Entry> tmp = std::make_shared<ParameterEntry>(e->getId(), e->getType(), REF);
+			std::shared_ptr<Entry> tmp = std::make_shared<ParameterEntry>(e->getId(), e->getType(), REF, true);
 			tmp->setNesting(i);
 			entries[e->getId()].push_front(tmp);
 			if (i == scopes.front()->getNesting()) break;
@@ -560,12 +578,16 @@ public:
 		e->setNesting(scopes.front()->getNesting());
 		if(e->getEntryType() == VAR || e->getEntryType() == PAR)
 		{
-			int off = scopes.front()->getOffset() + 1;
-			e->setOffset(off);
-			scopes.front()->setOffset(off);
+			e->setOffset(scopes.front()->offset++);
 		}
 		entries[e->getId()].push_front(e);
 		return;
+	}
+
+	void replaceTop(std::shared_ptr<Entry> e)
+	{
+		this->entries[e->getId()].pop_front();
+		this->entries[e->getId()].push_front(e);
 	}
 
 	std::shared_ptr<Entry> lookup(std::string id, SearchScope s, bool error)
@@ -575,7 +597,7 @@ public:
 		{
 			if(error)
 			{
-				std::cerr<<"Unknown identifier "<<id<<'\n';
+				std::cerr<<"Unknown identifier \""<<id<<"\"\n";
 				exit(1);
 			}
 			return nullptr;
@@ -583,6 +605,7 @@ public:
 		std::deque<std::shared_ptr<Entry>> e = this->entries[id];
 		if(s == CUR)
 		{
+			if(e.front()==nullptr) return nullptr;
 			if(e.front()->getNesting() != this->scopes.front()->getNesting()) return nullptr;
 			return e.front();
 		}
@@ -670,8 +693,10 @@ inline std::shared_ptr<SymTable> TableInit()
 	return t;
 }
 
-inline bool equals(std::shared_ptr<Type> a, std::shared_ptr<Type> b)
+inline bool equals(std::shared_ptr<Type> a, std::shared_ptr<Type> b, bool check_ref = true)
 {
+	if(!check_ref)
+		return a->getType() == b->getType();
 	if (a->getType() == b->getType())
 	{
 		if(a->getType() == ARRAY)
