@@ -1,13 +1,27 @@
 #ifndef __AST_HPP__
 #define __AST_HPP__
 
-#pragma once
-
 #include <cstdlib>
 #include <iostream>
-#include <map>
 #include <vector>
 #include <memory>
+
+#include <llvm/IR/Value.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Verifier.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Type.h>
+#include <llvm/IR/Verifier.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#include <llvm/Transforms/Scalar.h>
+#include <llvm/Transforms/Scalar/GVN.h>
+#include <llvm/Transforms/Utils.h>
+
 #include "SymTable.hpp"
 
 class AST {
@@ -22,11 +36,6 @@ public:
     t=t1;
   }
 
-  virtual void sem(std::shared_ptr<SymTable> table)
-  {
-    return;
-  }
-
   virtual bool isLval()
   {
     return false;
@@ -37,8 +46,74 @@ public:
     return false;
   }
 
+  virtual void sem(std::shared_ptr<SymTable> table)
+  {
+    return;
+  }
+
+  virtual AST* get_condition()
+  {
+    return nullptr;
+  }
+
+  virtual void set_prev_vars()
+  {
+    return;
+  }
+
+  virtual llvm::Value* compile() = 0;
+
+  void begin_compilation(bool opt);
+
+  static llvm::LLVMContext TheContext;
+  static llvm::Type *i1;
+  static llvm::Type *i8;
+  static llvm::Type *i16;
+  static llvm::Type *i32;
+  static llvm::Type *i64;
+  static llvm::PointerType *List_t;
+
 protected:
   std::shared_ptr<Type> t;
+
+  static std::unordered_map<std::string, std::vector<std::shared_ptr<AST>>> my_map;
+
+  static llvm::IRBuilder<> Builder;
+  static std::unique_ptr<llvm::Module> TheModule;
+  static std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
+  static llvm::Function *ThePuti;
+  static llvm::Function *ThePutb;
+  static llvm::Function *ThePutc;
+  static llvm::Function *ThePuts;
+  static llvm::Function *TheGeti;
+  static llvm::Function *TheGetb;
+  static llvm::Function *TheGetc;
+  static llvm::Function *TheGets;
+  static llvm::Function *TheAbs;
+  static llvm::Function *TheOrd;
+  static llvm::Function *TheChr;
+  static llvm::Function *TheStrlen;
+  static llvm::Function *TheStrcmp;
+  static llvm::Function *TheStrcpy;
+  static llvm::Function *TheStrcat;
+  static llvm::Function *TheInit;
+  static llvm::Function *TheMalloc;
+
+  // static llvm::ConstantInt* c1(bool b) {
+  //   return llvm::ConstantInt::get(TheContext, llvm::APInt(1, b, true));
+  // }
+  static llvm::ConstantInt* c8(char c) {
+    return llvm::ConstantInt::get(TheContext, llvm::APInt(8, c, true));
+  }
+  static llvm::ConstantInt* c16(int n) {
+    return llvm::ConstantInt::get(TheContext, llvm::APInt(16, n, true));
+  }
+  static llvm::ConstantInt* c32(int n) {
+    return llvm::ConstantInt::get(TheContext, llvm::APInt(32, n, true));
+  }
+  static llvm::ConstantInt* c64(int n) {
+    return llvm::ConstantInt::get(TheContext, llvm::APInt(64, n, true));
+  }
 };
 
 class Int : public AST {
@@ -48,6 +123,8 @@ public:
     value=i;
     t=std::make_shared<IntType>();
   }
+
+  virtual llvm::Value* compile() override;
 
 private:
   int value;
@@ -60,6 +137,8 @@ public:
     value=c;
     t=std::make_shared<CharType>();
   }
+
+  virtual llvm::Value* compile() override;
 
 private:
   char value;  
@@ -78,6 +157,8 @@ public:
     return true;
   }
 
+  virtual llvm::Value* compile() override;
+
 private:
   std::string value;
 };
@@ -89,6 +170,8 @@ public:
     value=b;
     t=std::make_shared<BoolType>();
   }
+
+  virtual llvm::Value* compile() override;
 
 private:
   bool value;
@@ -104,6 +187,11 @@ public:
   virtual void sem(std::shared_ptr<SymTable> table) override
   {
     std::shared_ptr<Entry> e = table->lookup(id, ALL, true);
+    if(e==nullptr)
+    {
+      std::cerr<<"Unknown identifier "<<id<<'\n';
+      exit(1);
+    }
     if(e->getEntryType() == FUN)
     {
       std::cerr<<id<<" is not a variable"<<'\n';
@@ -118,6 +206,8 @@ public:
   {
     return true;
   }
+
+  virtual llvm::Value* compile() override;
 
 private:
   std::string id;
@@ -160,6 +250,8 @@ public:
     return atom->isString();
   }
 
+  virtual llvm::Value* compile() override;
+
 private:
   AST *atom, *pos;
 };
@@ -170,6 +262,8 @@ public:
   {
     t=std::make_shared<ListType>(nullptr);
   }
+
+  virtual llvm::Value* compile() override;
 };
 
 class BinOp : public AST {
@@ -248,6 +342,8 @@ public:
 
   }
 
+  virtual llvm::Value* compile() override;
+
 private:
   AST *lhs, *rhs;
   BOperator op;
@@ -323,6 +419,8 @@ public:
     }
   }
 
+  virtual llvm::Value* compile() override;
+
 private:
   AST* rhs;
   UOperator op;
@@ -347,6 +445,8 @@ public:
     }
   }
 
+  virtual llvm::Value* compile() override;
+
 private:
   AST* size;
 };
@@ -354,6 +454,8 @@ private:
 class Skip : public AST {
 public:
   Skip(){}
+
+  virtual llvm::Value* compile() override;
 };
 
 class Assign : public AST {
@@ -386,6 +488,8 @@ public:
     // t = lhs->getType();
   }
 
+  virtual llvm::Value* compile() override;
+
 private:
   AST *lhs, *rhs;
 };
@@ -400,7 +504,14 @@ public:
 
   virtual void sem(std::shared_ptr<SymTable> table) override
   {
+    std::shared_ptr<Type> k(new ListType(nullptr));
+    std::shared_ptr<Type> l(new ArrayType(nullptr));
     std::shared_ptr<Entry> e = table->lookup(id, ALL, true);
+    if(e==nullptr)
+    {
+      std::cerr<<"Unknown identifier "<<id<<'\n';
+      exit(1);
+    }
     if(e->getEntryType() != FUN)
     {
       std::cerr<<id<<" is not a function"<<'\n';
@@ -421,13 +532,22 @@ public:
         std::cerr<<"Type mismatch in parameter "<<p[i]->getId()<<" of function "<<id<<'\n';
         exit(1);
       }
+      else if(p[i]->getPassMode()==REF && !parameters[i]->isLval() && !equals(parameters[i]->getType(), k, false) && !equals(parameters[i]->getType(), l, false))
+      {
+        std::cerr<<"Parameter "<<p[i]->getId()<<" of function "<<id<<" must be an L-value\n";
+        exit(1);
+      }
     }
     t = e->getType();
+    fun = e;
   }
+
+  virtual llvm::Value* compile() override;
 
 private:
 	std::vector<AST*> parameters;
 	std::string id;
+  std::shared_ptr<Entry> fun;
 };
 
 class Exit : public AST {
@@ -443,6 +563,8 @@ public:
       exit(1);
     }
   }
+
+  virtual llvm::Value* compile() override;
 
 };
 
@@ -463,6 +585,8 @@ public:
       exit(1);
     }
   }
+
+  virtual llvm::Value* compile() override;
 
 private:
 	AST *rhs;
@@ -488,6 +612,13 @@ public:
     for(unsigned i=0; i<elsif_list.size(); ++i)
       elsif_list[i]->sem(table);
   }
+
+  virtual AST* get_condition() override
+  {
+    return cond;
+  }
+
+  virtual llvm::Value* compile() override;
 
 private:
 	std::vector<AST*> elsif_list;
@@ -521,6 +652,8 @@ public:
       else_stmt_list[i]->sem(table);
   }
 
+  virtual llvm::Value* compile() override;
+
 private:
 	std::vector<AST*> if_stmt_list, elsif_list, else_stmt_list;
 	AST *cond;
@@ -552,6 +685,8 @@ public:
     for(unsigned i=0; i<loop.size(); ++i)
       loop[i]->sem(table);
   }
+
+  virtual llvm::Value* compile() override;
 
 private:
 	std::vector<AST*> init, steps, loop;
@@ -586,6 +721,8 @@ public:
     }
   }
 
+  virtual llvm::Value* compile() override;
+
 private:
   std::vector<std::string> var_names;
 };
@@ -611,6 +748,8 @@ public:
   {
     return mode;
   }
+
+  virtual llvm::Value* compile() override;
 
 private:
   std::vector<std::string> var_names;
@@ -654,6 +793,8 @@ public:
     return name;
   }
 
+  virtual llvm::Value* compile() override;
+
 private:
   std::string name;
   std::vector<std::shared_ptr<Entry>> parameters;
@@ -663,11 +804,35 @@ class Decl : public AST {
 public:
   Decl(Header *t1)
   {
-    header = t1;
+    t = t1->getType();
+    name = t1->getName();
+    parameters = t1->getParams();
   }
 
+  virtual void sem(std::shared_ptr<SymTable> table) override
+  {
+    std::shared_ptr<Entry> e = table->lookup(name, CUR, false);
+    if(e!=nullptr)
+    {
+      std::cerr<<"Dublicate identifier "<<name<<'\n';
+      exit(1);
+    }
+    std::shared_ptr<Entry> fun = std::make_shared<FunctionEntry>(name, t, true);
+    table->insert(fun);
+    table->openScope(fun);
+    for(unsigned i=0; i<parameters.size(); ++i)
+    {
+      // table->insert(parameters[i]);
+      table->addParam(parameters[i]);
+    }
+    table->closeScope();
+  }
+
+  virtual llvm::Value* compile() override;
+
 private:
-  Header *header;
+  std::string name;
+  std::vector<std::shared_ptr<Entry>> parameters;
 };
 
 class Func : public AST {
@@ -690,18 +855,44 @@ public:
   virtual void sem(std::shared_ptr<SymTable> table) override
   {
     std::shared_ptr<Entry> e = table->lookup(name, CUR, false);
+    std::shared_ptr<Entry> fun;
     if(e!=nullptr)
     {
-      std::cerr<<"Dublicate identifier "<<name<<'\n';
-      exit(1);
+      if(e->getEntryType()!=FUN)
+      {
+        std::cerr<<"Dublicate identifier "<<name<<'\n';
+        exit(1);
+      }
+      if(parameters.size()!=e->getParameters().size())
+      {
+        std::cerr<<"Definition for function "<<name<<" does not match the declaration\n";
+        exit(1);
+      }
+      std::vector<std::shared_ptr<Entry>> p = e->getParameters();
+      for(unsigned i=0; i<parameters.size(); ++i)
+      {
+        if(!equals(parameters[i]->getType(), p[i]->getType()) || parameters[i]->getPassMode()!=p[i]->getPassMode())
+        {
+          std::cerr<<"Definition for function "<<name<<" does not match the declaration\n";
+          exit(1);
+        }
+      }
+      fun = e;
+      fun->UnDecl();
+      table->openScope(fun);
+      for(unsigned i=0; i<parameters.size(); ++i)
+        table->insert(parameters[i]);
     }
-    std::shared_ptr<Entry> fun = std::make_shared<FunctionEntry>(name, t, false);
-    table->insert(fun);
-    table->openScope(fun);
-    for(unsigned i=0; i<parameters.size(); ++i)
+    else
     {
-      table->insert(parameters[i]);
-      table->addParam(parameters[i]);
+      fun = std::make_shared<FunctionEntry>(name, t, false);
+      table->insert(fun);
+      table->openScope(fun);
+      for(unsigned i=0; i<parameters.size(); ++i)
+      {
+        table->insert(parameters[i]);
+        table->addParam(parameters[i]);
+      }
     }
     for(unsigned i=0; i<def_list.size(); ++i)
       def_list[i]->sem(table);
@@ -711,7 +902,23 @@ public:
     for(auto it: e->getPrevScopeVars())
       prev_params.push_back(std::make_shared<ParameterEntry>(it->getId(), it->getType(), REF));
     table->closeScope();
+    if(main)
+    {
+      if(parameters.size()!=0)
+      {
+        std::cerr<<"Main function "<<name<<" must not take any arguments\n";
+        exit(1);
+      }
+      std::shared_ptr<Type> v(new VoidType);
+      if(!equals(t, v, false))
+      {
+        std::cerr<<"Main function "<<name<<" must not have return type\n";
+        exit(1);
+      }
+    }
   }
+
+  virtual llvm::Value* compile() override;
 
 private:
   bool main;

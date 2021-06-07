@@ -5,7 +5,6 @@
 #include "lexer.hpp"
 #include "SymTable.hpp"
 
-
 AST* root;
 
 %}
@@ -250,13 +249,19 @@ expr:
 
 int main() {
   int result = yyparse();
-  if (result == 0) printf("Success.\n");
-  else
-  { 
-  	printf("Failed.\n");
-  	return 0;
+  // if (result == 0) printf("Success.\n");
+  // else
+  // { 
+  // 	printf("Failed.\n");
+  // 	return 0;
+  // }
+  if(result!=0)
+  {
+  	printf("Parsing failed\n");
+  	exit(1);
   }
   std::shared_ptr<SymTable> table = TableInit();
   root->sem(table);
+  root->begin_compilation(false);
   return 0;
 }

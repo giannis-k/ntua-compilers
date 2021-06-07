@@ -114,7 +114,7 @@ public:
 
 	virtual int getSize() override
 	{
-		return 4;
+		return 2;
 	}
 
 	virtual std::ostream& print(std::ostream &out) const override
@@ -335,12 +335,12 @@ public:
 		this->entry_type=VAR;
 	}
 
-	void setOffset(int offset)
+	void setOffset(int offset) override
 	{
 		this->offset=offset;
 	}
 
-	int getOffset()
+	int getOffset() override
 	{
 		return this->offset;
 	}
@@ -375,17 +375,17 @@ public:
 		return this->isPrev;
 	}
 
-	void setOffset(int offset)
+	void setOffset(int offset) override
 	{
 		this->offset=offset;
 	}
 
-	int getOffset()
+	int getOffset() override
 	{
 		return this->offset;
 	}
 
-	PassMode getPassMode()
+	PassMode getPassMode() override
 	{
 		return this->mode;
 	}
@@ -412,7 +412,7 @@ public:
 		this->entry_type=FUN;
 	}
 
-	void plusRet()
+	void plusRet() override
 	{
 		this->returns++;
 	}
@@ -422,32 +422,32 @@ public:
 		return this->returns;
 	}
 
-	void addParameter(std::shared_ptr<Entry> parameter)
+	void addParameter(std::shared_ptr<Entry> parameter) override
 	{
 		parameters.push_back(parameter);
 	}
 
-	const std::vector<std::shared_ptr<Entry>>& getParameters() const
+	const std::vector<std::shared_ptr<Entry>>& getParameters() const override
 	{
 		return this->parameters;
 	}
 
-	void addPrevScopeVar(std::shared_ptr<Entry> variable)
+	void addPrevScopeVar(std::shared_ptr<Entry> variable) override
 	{
 		prev_scope_vars.push_back(variable);
 	}
 
-	const std::vector<std::shared_ptr<Entry>>& getPrevScopeVars() const
+	const std::vector<std::shared_ptr<Entry>>& getPrevScopeVars() const override
 	{
 		return this->prev_scope_vars;
 	}
 
-	virtual void UnDecl()
+	virtual void UnDecl() override
 	{
 		decl=false;
 	}
 
-	virtual const bool isDecl() const
+	virtual const bool isDecl() const override
 	{
 		return decl;
 	}
