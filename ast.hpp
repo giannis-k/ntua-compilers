@@ -840,6 +840,7 @@ public:
   Func(Header *t1, std::vector<AST*> t2, std::vector<AST*> t3)
   {
     main = false;
+    declared = false;
     t = t1->getType();
     name = t1->getName();
     parameters = t1->getParams();
@@ -858,6 +859,7 @@ public:
     std::shared_ptr<Entry> fun;
     if(e!=nullptr)
     {
+      declared = true;
       if(e->getEntryType()!=FUN)
       {
         std::cerr<<"Dublicate identifier "<<name<<'\n';
@@ -921,7 +923,7 @@ public:
   virtual llvm::Value* compile() override;
 
 private:
-  bool main;
+  bool main, declared;
   std::string name;
   std::vector<std::shared_ptr<Entry>> parameters, prev_params;
   std::vector<AST*> def_list, stmts;

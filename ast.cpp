@@ -145,6 +145,8 @@ private:
 static std::deque<std::shared_ptr<compileBlock>> blocks;
 static compileScope scopes;
 
+std::string prefix = "7";
+
 llvm::LLVMContext AST::TheContext;
 llvm::IRBuilder<> AST::Builder(TheContext);
 std::unique_ptr<llvm::Module> AST::TheModule;
@@ -640,11 +642,13 @@ llvm::Value* Header::compile()
 
 llvm::Value* Decl::compile()
 {
-	return nullptr;
-}
-
-llvm::Value* Func::compile()
-{
+	llvm::Function* TheFunction = TheModule->getFunction(name);
+	std::string id = name;
+	if(TheFunction)
+	{
+		id = prefix+name;
+		prefix += "7";
+	}
 	std::shared_ptr<compileBlock> bl = std::make_shared<compileBlock>();
 	blocks.push_front(bl);
 	for(unsigned i=0; i<parameters.size(); ++i)
@@ -658,7 +662,7 @@ llvm::Value* Func::compile()
 	// 	blocks.front()->addVar(prev_params[i]->getId(), prev_params[i]->getType(), prev_params[i]->getPassMode());
 	// }
 	llvm::FunctionType* fun_type = llvm::FunctionType::get(LLVM_Type(t, VAL), blocks.front()->getParams(), false);
-	llvm::Function* TheFunction = llvm::Function::Create(fun_type, llvm::Function::ExternalLinkage, name, TheModule.get());
+	TheFunction = llvm::Function::Create(fun_type, llvm::Function::ExternalLinkage, id, TheModule.get());
 	blocks.front()->setFun(TheFunction);
 	scopes.addFun(name, TheFunction);
 	scopes.open();
@@ -673,6 +677,56 @@ llvm::Value* Func::compile()
 	// 	it->setName(prev_params[i]->getId());
 	// 	it++
 	// }
+	blocks.pop_front();
+	scopes.close();
+	return TheFunction;
+}
+
+llvm::Value* Func::compile()
+{
+	llvm::Function* TheFunction;
+	std::string id = name;
+	if(declared)
+		TheFunction = scopes.getFun(name);
+	else if(TheModule->getFunction(name))
+	{
+		id = prefix+name;
+		prefix += "7";
+	}
+	std::shared_ptr<compileBlock> bl = std::make_shared<compileBlock>();
+	blocks.push_front(bl);
+	for(unsigned i=0; i<parameters.size(); ++i)
+	{
+		blocks.front()->addParameter(parameters[i]->getId(), parameters[i]->getType(), parameters[i]->getPassMode());
+		blocks.front()->addVar(parameters[i]->getId(), parameters[i]->getType(), parameters[i]->getPassMode());
+	}
+	// for(unsigned i=0; i<prev_params.size(); ++i)
+	// {
+	// 	blocks.front()->addParameter(prev_params[i]->getId(), prev_params[i]->getType(), prev_params[i]->getPassMode());
+	// 	blocks.front()->addVar(prev_params[i]->getId(), prev_params[i]->getType(), prev_params[i]->getPassMode());
+	// }
+	if(!declared)
+	{
+		llvm::FunctionType* fun_type = llvm::FunctionType::get(LLVM_Type(t, VAL), blocks.front()->getParams(), false);
+		TheFunction = llvm::Function::Create(fun_type, llvm::Function::ExternalLinkage, id, TheModule.get());
+	}
+	blocks.front()->setFun(TheFunction);
+	scopes.addFun(name, TheFunction);
+	scopes.open();
+	auto it = TheFunction->arg_begin();
+	if(!declared)
+	{
+		for(unsigned i=0; i<parameters.size(); ++i)
+		{
+			it->setName(parameters[i]->getId());
+			it++;
+		}
+		// for(unsigned i=0; i<prev_params.size(); ++i)
+		// {
+		// 	it->setName(prev_params[i]->getId());
+		// 	it++
+		// }
+	}
 	llvm::BasicBlock* FunBB = llvm::BasicBlock::Create(TheContext, "entry", TheFunction);
 	Builder.SetInsertPoint(FunBB);
 	blocks.front()->setBlock(FunBB);
