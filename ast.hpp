@@ -826,13 +826,15 @@ public:
       table->addParam(parameters[i]);
     }
     table->closeScope();
+    func = fun;
   }
 
   virtual llvm::Value* compile() override;
 
 private:
   std::string name;
-  std::vector<std::shared_ptr<Entry>> parameters;
+  std::vector<std::shared_ptr<Entry>> parameters, prev_params;
+  std::shared_ptr<Entry> func;
 };
 
 class Func : public AST {
@@ -918,6 +920,7 @@ public:
         exit(1);
       }
     }
+    func = fun;
   }
 
   virtual llvm::Value* compile() override;
@@ -927,6 +930,7 @@ private:
   std::string name;
   std::vector<std::shared_ptr<Entry>> parameters, prev_params;
   std::vector<AST*> def_list, stmts;
+  std::shared_ptr<Entry> func;
 };
 
 #endif

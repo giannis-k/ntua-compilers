@@ -145,7 +145,7 @@ private:
 static std::deque<std::shared_ptr<compileBlock>> blocks;
 static compileScope scopes;
 
-std::string prefix = "7";
+std::string postfix = "7";
 
 llvm::LLVMContext AST::TheContext;
 llvm::IRBuilder<> AST::Builder(TheContext);
@@ -511,12 +511,23 @@ llvm::Value* Call::compile()
 		else
 			Args.push_back(parameters[i]->compile());
 	}
-	// std::vector<std::shared_ptr<Entry>> pr = fun->getPrevScopeVars();
-	// for(unsigned i=0; i<pr.size(); ++i)
-	// {
-	// 	AST* tmp = new Var(pr[i]->getId());
-	// 	Args.push_back(tmp->compile());
-	// }
+
+	std::vector<std::shared_ptr<Entry>> pr = fun->getPrevScopeVars();
+	for(unsigned i=0; i<pr.size(); ++i)
+	{
+		AST* tmp = new Var(pr[i]->getId());
+		tmp->setType(pr[i]->getType());
+		if(!equals(pr[i]->getType(), j, false) && !equals(pr[i]->getType(), k, false))
+			Args.push_back(tmp->compile());
+		else
+		{
+			llvm::Value* par = tmp->compile();
+			if(llvm::PointerType::classof(par->getType()))
+				par = Builder.CreateLoad(par, "par");
+			Args.push_back(par);
+		}
+	}
+
 	return Builder.CreateCall(TheFunction, Args);;
 }
 
@@ -646,8 +657,8 @@ llvm::Value* Decl::compile()
 	std::string id = name;
 	if(TheFunction)
 	{
-		id = prefix+name;
-		prefix += "7";
+		id = name+postfix;
+		postfix += "7";
 	}
 	std::shared_ptr<compileBlock> bl = std::make_shared<compileBlock>();
 	blocks.push_front(bl);
@@ -656,11 +667,14 @@ llvm::Value* Decl::compile()
 		blocks.front()->addParameter(parameters[i]->getId(), parameters[i]->getType(), parameters[i]->getPassMode());
 		blocks.front()->addVar(parameters[i]->getId(), parameters[i]->getType(), parameters[i]->getPassMode());
 	}
-	// for(unsigned i=0; i<prev_params.size(); ++i)
-	// {
-	// 	blocks.front()->addParameter(prev_params[i]->getId(), prev_params[i]->getType(), prev_params[i]->getPassMode());
-	// 	blocks.front()->addVar(prev_params[i]->getId(), prev_params[i]->getType(), prev_params[i]->getPassMode());
-	// }
+
+	prev_params = func->getPrevScopeVars();
+	for(unsigned i=0; i<prev_params.size(); ++i)
+	{
+		blocks.front()->addParameter(prev_params[i]->getId(), prev_params[i]->getType(), REF);
+		blocks.front()->addVar(prev_params[i]->getId(), prev_params[i]->getType(), REF);
+	}
+
 	llvm::FunctionType* fun_type = llvm::FunctionType::get(LLVM_Type(t, VAL), blocks.front()->getParams(), false);
 	TheFunction = llvm::Function::Create(fun_type, llvm::Function::ExternalLinkage, id, TheModule.get());
 	blocks.front()->setFun(TheFunction);
@@ -672,11 +686,13 @@ llvm::Value* Decl::compile()
 		it->setName(parameters[i]->getId());
 		it++;
 	}
-	// for(unsigned i=0; i<prev_params.size(); ++i)
-	// {
-	// 	it->setName(prev_params[i]->getId());
-	// 	it++
-	// }
+
+	for(unsigned i=0; i<prev_params.size(); ++i)
+	{
+		it->setName(prev_params[i]->getId());
+		it++;
+	}
+
 	blocks.pop_front();
 	scopes.close();
 	return TheFunction;
@@ -690,8 +706,8 @@ llvm::Value* Func::compile()
 		TheFunction = scopes.getFun(name);
 	else if(TheModule->getFunction(name))
 	{
-		id = prefix+name;
-		prefix += "7";
+		id = name+postfix;
+		postfix += "7";
 	}
 	std::shared_ptr<compileBlock> bl = std::make_shared<compileBlock>();
 	blocks.push_front(bl);
@@ -700,11 +716,14 @@ llvm::Value* Func::compile()
 		blocks.front()->addParameter(parameters[i]->getId(), parameters[i]->getType(), parameters[i]->getPassMode());
 		blocks.front()->addVar(parameters[i]->getId(), parameters[i]->getType(), parameters[i]->getPassMode());
 	}
-	// for(unsigned i=0; i<prev_params.size(); ++i)
-	// {
-	// 	blocks.front()->addParameter(prev_params[i]->getId(), prev_params[i]->getType(), prev_params[i]->getPassMode());
-	// 	blocks.front()->addVar(prev_params[i]->getId(), prev_params[i]->getType(), prev_params[i]->getPassMode());
-	// }
+
+	prev_params = func->getPrevScopeVars();
+	for(unsigned i=0; i<prev_params.size(); ++i)
+	{
+		blocks.front()->addParameter(prev_params[i]->getId(), prev_params[i]->getType(), REF);
+		blocks.front()->addVar(prev_params[i]->getId(), prev_params[i]->getType(), REF);
+	}
+
 	if(!declared)
 	{
 		llvm::FunctionType* fun_type = llvm::FunctionType::get(LLVM_Type(t, VAL), blocks.front()->getParams(), false);
@@ -721,11 +740,13 @@ llvm::Value* Func::compile()
 			it->setName(parameters[i]->getId());
 			it++;
 		}
-		// for(unsigned i=0; i<prev_params.size(); ++i)
-		// {
-		// 	it->setName(prev_params[i]->getId());
-		// 	it++
-		// }
+
+		for(unsigned i=0; i<prev_params.size(); ++i)
+		{
+			it->setName(prev_params[i]->getId());
+			it++;
+		}
+
 	}
 	llvm::BasicBlock* FunBB = llvm::BasicBlock::Create(TheContext, "entry", TheFunction);
 	Builder.SetInsertPoint(FunBB);
@@ -741,13 +762,15 @@ llvm::Value* Func::compile()
 		Builder.CreateStore(it, a);
 		it++;
 	}
-	// for(unsigned i=0; i<prev_params.size(); ++i)
-	// {
-	// 	llvm::AllocaInst a = Builder.CreateAlloca(it->getType(), nullptr, it->getName());
-	// 	blocks.front()->addAddr(it->getName(), a);
-	//	Builder.CreateStore(it, a);
-	// 	it++;
-	// }
+
+	for(unsigned i=0; i<prev_params.size(); ++i)
+	{
+		llvm::AllocaInst* a = Builder.CreateAlloca(it->getType(), nullptr, it->getName());
+		blocks.front()->addAddr(it->getName(), a);
+		Builder.CreateStore(it, a);
+		it++;
+	}
+
 	for(unsigned i=0; i<def_list.size(); ++i)
 	{
 		Builder.SetInsertPoint(FunBB);
