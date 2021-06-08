@@ -327,7 +327,7 @@ public:
       case CONS:
       	std::shared_ptr<Type> k(new ListType(nullptr));
       	if(!equals(rhs->getType(), k, false))
-  		{
+  		  {
           std::cerr<<"Second operand of the # operator must be a list"<<'\n';
           exit(1);
         }
@@ -710,7 +710,7 @@ public:
       {
       	if(!e->isPrevScope())
         {
-          std::cerr<<"dubl "<<*e<<'\n';
+          // std::cerr<<"dubl "<<*e<<'\n';
           std::cerr<<"Dublicate identifier "<<var_names[i]<<'\n';
           exit(1);
         }
@@ -862,7 +862,7 @@ public:
     if(e!=nullptr)
     {
       declared = true;
-      if(e->getEntryType()!=FUN)
+      if(e->getEntryType()!=FUN || !e->isDecl())
       {
         std::cerr<<"Dublicate identifier "<<name<<'\n';
         exit(1);
