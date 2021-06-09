@@ -23,7 +23,7 @@ tony: lexer.o parser.o ast.o
 
 lib.a: lib.c
 	gcc -Wno-unused-value -c -Wall -o lib.o lib.c
-	ar ruv lib.a lib.o
+	ar rcs lib.a lib.o
 	ranlib lib.a
 
 clean:

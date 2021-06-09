@@ -39,10 +39,10 @@ AST* root;
 %token T_ge				">="
 %token T_ne				"<>"
 %token T_assign			":="
-%token T_int_const<num>
-%token T_char_const<ch>
-%token T_id<name>
-%token T_string<str>
+%token<num> T_int_const
+%token<ch> T_char_const
+%token<str> T_id
+%token<str> T_string
 
 %left "or"
 %left "and"
@@ -79,10 +79,6 @@ AST* root;
 %type<t> atom
 %type<t> expr
 %type<t> call
-%type<str> T_id
-%type<num> T_int_const
-%type<ch> T_char_const
-%type<str> T_string
 %type<vec_str> id_list
 %type<t> var_def
 %type<par> formal
