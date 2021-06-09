@@ -243,7 +243,7 @@ expr:
 
 %%
 
-int main() {
+int main(int argc, char **argv) {
   int result = yyparse();
   // if (result == 0) printf("Success.\n");
   // else
@@ -258,6 +258,7 @@ int main() {
   }
   std::shared_ptr<SymTable> table = TableInit();
   root->sem(table);
-  root->begin_compilation(false);
+  bool opt = (bool) argv[1][0];
+  root->begin_compilation(opt);
   return 0;
 }
