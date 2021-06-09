@@ -1,4 +1,7 @@
 examples
-bonus-1.0
-ast_template.hpp
-symbol_template.hpp
+*.o 
+*.out 
+*.ll 
+*.s
+lib.a
+tony
