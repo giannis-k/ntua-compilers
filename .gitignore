@@ -5,3 +5,4 @@ examples
 *.s
 lib.a
 tony
+test.py
