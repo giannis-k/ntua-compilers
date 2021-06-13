@@ -25,6 +25,7 @@ make; make clean
 ```
 
 Χρήση των flags:
+- -h: επεξήγηση χρήσης
 - -O: ενεργοποίηση βελτιστοποιήσεων
 - -i: είσοδος από το standard input και ο ενδιάμεσος κώδικας θα τυπωθεί στο standard output
 - -f: είσοδος από το standard input και ο τελικός κώδικας θα τυπωθεί στο standard output
