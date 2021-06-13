@@ -170,7 +170,6 @@ llvm::Function *AST::TheStrcat;
 llvm::Function *AST::TheInit;
 llvm::Function *AST::TheMalloc;
 
-llvm::Type *AST::i1 = llvm::IntegerType::get(TheContext, 1);
 llvm::Type *AST::i8 = llvm::IntegerType::get(TheContext, 8);
 llvm::Type *AST::i16 = llvm::IntegerType::get(TheContext, 16);
 llvm::Type *AST::i32 = llvm::IntegerType::get(TheContext, 32);
@@ -276,10 +275,7 @@ void AST::begin_compilation(bool opt)
 	TheInit = llvm::Function::Create(init_type, llvm::Function::ExternalLinkage, "GC_init", TheModule.get());
 
 	llvm::Value* program = compile();
-	llvm::Function *program_main = TheModule->getFunction("main");
 	llvm::Value* main_fun = TheModule->getFunction(program->getName());
-	if(program_main!=nullptr)
-		program_main->setName("__main__");
 	llvm::FunctionType* main_type = llvm::FunctionType::get(i32, {}, false);
 	llvm::Function* TheMain = llvm::Function::Create(main_type, llvm::Function::ExternalLinkage, "main", TheModule.get());
 	llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", TheMain);
@@ -476,8 +472,6 @@ llvm::Value* New::compile()
 
 llvm::Value* Assign::compile()
 {
-	// if(Builder.GetInsertBlock()->getTerminator())
-	// 	return nullptr;
 	llvm::Value* left = lhs->compile();
 	llvm::Value* right = rhs->compile();
 	if(rhs->isLval() && llvm::PointerType::classof(right->getType()))
@@ -533,16 +527,12 @@ llvm::Value* Call::compile()
 
 llvm::Value* Exit::compile()
 {
-	// if(Builder.GetInsertBlock()->getTerminator())
-	// 	return nullptr;
 	blocks.front()->addRet();
 	return Builder.CreateRetVoid();
 }
 
 llvm::Value* Ret::compile()
 {
-	// if(Builder.GetInsertBlock()->getTerminator())
-	// 	return nullptr;
 	blocks.front()->addRet();
 	llvm::Value* ret = rhs->compile();
 	if(rhs->isLval() && llvm::PointerType::classof(ret->getType()))
@@ -552,8 +542,6 @@ llvm::Value* Ret::compile()
 
 llvm::Value* Elsif::compile()
 {
-	// if(Builder.GetInsertBlock()->getTerminator())
-	// 	return nullptr;
 	for(unsigned i=0; i<elsif_list.size(); ++i)
 		elsif_list[i]->compile();
 	return nullptr;
@@ -561,8 +549,6 @@ llvm::Value* Elsif::compile()
 
 llvm::Value* If::compile()
 {
-	// if(Builder.GetInsertBlock()->getTerminator())
-	// 	return nullptr;
 	llvm::Value* c = cond->compile();
 	if(llvm::PointerType::classof(c->getType()))
 		c = Builder.CreateLoad(c, "c");
@@ -576,7 +562,6 @@ llvm::Value* If::compile()
 	blocks.front()->setBlock(ThenBB);
 	for(unsigned i=0; i<if_stmt_list.size(); ++i)
 		if_stmt_list[i]->compile();
-	// if(!Builder.GetInsertBlock()->getTerminator())
 	if(!blocks.front()->hasRet())
 		Builder.CreateBr(AfterBB);
 	Builder.SetInsertPoint(ElseBB);
@@ -594,7 +579,6 @@ llvm::Value* If::compile()
 		Builder.SetInsertPoint(ThenBB);
 		blocks.front()->setBlock(ThenBB);
 		elsif_list[i]->compile();
-		// if(!Builder.GetInsertBlock()->getTerminator())
 		if(!blocks.front()->hasRet())
 			Builder.CreateBr(AfterBB);
 		Builder.SetInsertPoint(NextBB);
@@ -602,7 +586,6 @@ llvm::Value* If::compile()
 	}
 	for(unsigned i=0; i<else_stmt_list.size(); ++i)
 		else_stmt_list[i]->compile();
-	// if(!Builder.GetInsertBlock()->getTerminator())
 	if(!blocks.front()->hasRet())
 		Builder.CreateBr(AfterBB);
 	Builder.SetInsertPoint(AfterBB);
@@ -612,8 +595,6 @@ llvm::Value* If::compile()
 
 llvm::Value* For::compile()
 {
-	// if(Builder.GetInsertBlock()->getTerminator())
-	// 	return nullptr;
 	llvm::BasicBlock* PrevBB = Builder.GetInsertBlock();
 	llvm::Function* TheFunction = PrevBB->getParent();
 	llvm::BasicBlock* LoopBB = llvm::BasicBlock::Create(TheContext, "loop", TheFunction);
@@ -705,6 +686,11 @@ llvm::Value* Func::compile()
 	if(declared)
 		TheFunction = scopes.getFun(name);
 	else if(TheModule->getFunction(name))
+	{
+		id = name+postfix;
+		postfix += "7";
+	}
+	else if(id=="main")
 	{
 		id = name+postfix;
 		postfix += "7";

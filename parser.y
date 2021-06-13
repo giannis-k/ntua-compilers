@@ -9,6 +9,8 @@ AST* root;
 
 %}
 
+%define parse.error verbose
+
 %token T_and			"and"
 %token T_bool			"bool"
 %token T_char			"char"
@@ -258,7 +260,7 @@ int main(int argc, char **argv) {
   }
   std::shared_ptr<SymTable> table = TableInit();
   root->sem(table);
-  bool opt = (bool) argv[1][0];
+  bool opt = (argv[1][0]!='0') ? true : false;
   root->begin_compilation(opt);
   return 0;
 }

@@ -46,6 +46,11 @@ public:
     return false;
   }
 
+  virtual bool isStringItem()
+  {
+    return false;
+  }
+
   virtual void sem(std::shared_ptr<SymTable> table)
   {
     return;
@@ -56,17 +61,11 @@ public:
     return nullptr;
   }
 
-  virtual void set_prev_vars()
-  {
-    return;
-  }
-
   virtual llvm::Value* compile() = 0;
 
   void begin_compilation(bool opt);
 
   static llvm::LLVMContext TheContext;
-  static llvm::Type *i1;
   static llvm::Type *i8;
   static llvm::Type *i16;
   static llvm::Type *i32;
@@ -75,8 +74,6 @@ public:
 
 protected:
   std::shared_ptr<Type> t;
-
-  static std::unordered_map<std::string, std::vector<std::shared_ptr<AST>>> my_map;
 
   static llvm::IRBuilder<> Builder;
   static std::unique_ptr<llvm::Module> TheModule;
@@ -99,9 +96,6 @@ protected:
   static llvm::Function *TheInit;
   static llvm::Function *TheMalloc;
 
-  // static llvm::ConstantInt* c1(bool b) {
-  //   return llvm::ConstantInt::get(TheContext, llvm::APInt(1, b, true));
-  // }
   static llvm::ConstantInt* c8(char c) {
     return llvm::ConstantInt::get(TheContext, llvm::APInt(8, c, true));
   }
@@ -245,7 +239,7 @@ public:
     return true;
   }
 
-  virtual bool isString() override
+  virtual bool isStringItem() override
   {
     return atom->isString();
   }
@@ -474,7 +468,7 @@ public:
       exit(1);
     }
     lhs->sem(table);
-    if(lhs->isString())
+    if(lhs->isStringItem())
     {
       std::cerr<<"You cannot assign a const string"<<'\n';
       exit(1);

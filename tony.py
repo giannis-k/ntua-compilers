@@ -56,6 +56,9 @@ p = subprocess.Popen("./tony "+opt+" < "+file+" > a.ll", stdout=subprocess.PIPE,
 p_status = p.wait()
 if p_status!=0:
     print(err.decode("utf-8"))
+    os.remove("a.ll")
+    if args.file==None:
+        os.remove("__tmp__.txt")
     exit(1)
 
 if args.i_flag:

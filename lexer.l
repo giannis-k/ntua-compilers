@@ -190,6 +190,6 @@ int hexToInt(char a)
 }
 
 void yyerror(const char *msg) {
-  fprintf(stderr, "%s\n", msg);
+  fprintf(stderr, "error in line %d: %s\n", line, msg);
   exit(1);
 }
